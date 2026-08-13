@@ -8,6 +8,7 @@ type AppContextType = {
   chooseClass: (className: string) => void;
   totalAttendance: (attendance: number) => void;
   resetSetup: () => void;
+  selectTerm: (term: string) => void;
 };
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -23,6 +24,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "SET_TOTAL_ATTENDANCE", payload: attendance });
   }
 
+  function selectTerm(term: string) {
+    dispatch({ type: "SET_TERM", payload: term });
+  }
+
   function resetSetup() {
     dispatch({ type: "CLEAR_CLASS" });
     dispatch({ type: "CLEAR_TOTAL_ATTENDANCE" });
@@ -30,7 +35,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   return (
     <AppContext.Provider
-      value={{ state, dispatch, chooseClass, totalAttendance, resetSetup }}
+      value={{
+        state,
+        dispatch,
+        chooseClass,
+        totalAttendance,
+        resetSetup,
+        selectTerm,
+      }}
     >
       {children}
     </AppContext.Provider>

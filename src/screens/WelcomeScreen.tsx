@@ -18,6 +18,8 @@ import Toast from "react-native-toast-message";
 import { useNavigation } from "@react-navigation/native";
 import { useApp } from "@/src/context/app/appContext";
 import { useStudents } from "@/src/context/student/studentContext";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "@/src/navigation/AppNavigator";
 
 export default function WelcomeScreen() {
   const [fileName, setFileName] = useState("");
@@ -28,10 +30,12 @@ export default function WelcomeScreen() {
     dispatch: appDispatch,
     chooseClass,
     totalAttendance,
+    selectTerm,
   } = useApp();
 
   const { state: studentState, dispatch: studentDispatch } = useStudents();
-  const navigation = useNavigation();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   // Function to handle the continue button press
   const handleContinue = () => {
@@ -45,7 +49,7 @@ export default function WelcomeScreen() {
 
     setLoading(true);
     setTimeout(() => {
-      navigation.navigate("StudentList" as never);
+      navigation.replace("StudentList");
       setLoading(false);
     }, 1200);
   };
@@ -85,6 +89,7 @@ export default function WelcomeScreen() {
         fileUri = newPath; // stopped here *************
       }
 
+      //   setting import status true
       appDispatch({ type: "SET_IMPORT_STATUS", payload: true });
 
       let names: string[] = [];
@@ -191,18 +196,11 @@ export default function WelcomeScreen() {
     }
   };
 
-  /*
   useEffect(() => {
     const saveAttendance = async () => {
       if (!appState?.selectedClass) return;
 
       try {
-        // Safety check
-        if (!AsyncStorage) {
-          console.log("AsyncStorage is not available");
-          return;
-        }
-
         const saved = await AsyncStorage.getItem(appState.selectedClass);
         if (saved) {
           const reportData = JSON.parse(saved);
@@ -224,7 +222,7 @@ export default function WelcomeScreen() {
     };
 
     saveAttendance();
-  }, [appState?.totalAttendance, appState?.selectedClass]); */
+  }, [appState?.totalAttendance]);
 
   return (
     <KeyboardAvoidingView
@@ -253,6 +251,20 @@ export default function WelcomeScreen() {
             >
               <Picker.Item label="Select your class" value="" />
               {appState.class_names.map((name: string) => (
+                <Picker.Item key={name} label={name} value={name} />
+              ))}
+            </Picker>
+          </View>
+
+          {/* Term Picker */}
+          <View className="border border-gray-300 rounded-lg mb-5  overflow-hidden">
+            <Picker
+              selectedValue={appState.selectedTerm}
+              onValueChange={(value: any) => selectTerm(value)}
+              style={{ height: 50, width: "100%" }}
+            >
+              <Picker.Item label="Select Term" value="" />
+              {appState.term_names.map((name: string) => (
                 <Picker.Item key={name} label={name} value={name} />
               ))}
             </Picker>
@@ -317,10 +329,14 @@ export default function WelcomeScreen() {
           {/* Continue Button */}
           <TouchableOpacity
             className={`py-3.5 rounded-xl items-center ${
-              appState.selectedClass ? "bg-blue-600" : "bg-gray-400"
+              appState.selectedClass && appState.selectedTerm
+                ? "bg-blue-600"
+                : "bg-gray-400"
             }`}
             onPress={handleContinue}
-            disabled={!appState.selectedClass || loading}
+            disabled={
+              (!appState.selectedClass && !appState.selectedTerm) || loading
+            }
           >
             {loading ? (
               <ActivityIndicator color="#fff" />

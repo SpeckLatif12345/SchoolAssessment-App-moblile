@@ -16,7 +16,7 @@ export function getSubjectStatus(student: any, subject: string) {
     homeWork,
   ].filter((v) => v > 0).length;
 
-  if (caFilled === 0 && examScore === 0) return "empty"; // gray
-  if (caFilled < 5 || examScore === 0) return "incomplete"; // red
-  return "complete"; // green
+  if (caFilled === 0 && examScore === 0) return "empty";
+  if (caFilled < 5 || examScore === 0) return "incomplete";
+  return "complete";
 }
