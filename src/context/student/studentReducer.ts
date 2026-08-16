@@ -2,19 +2,32 @@ import { Student } from "@/src/types";
 export const initialState = {
   students: [] as Student[],
   currentSubject: "Mathematics",
-  subjects: [
-    "Mathematics",
-    "Integrated Science",
-    "Social Studies",
-    "Creative Arts",
-    "Twi",
-    "French",
-    "Religious & Moral Education",
-    "Computing",
-    "English Language",
-    "Career Technology",
-    "History",
-  ],
+  subjects: {
+    Class: [
+      "Mathematics",
+      "Integrated Science",
+      "Creative Arts",
+      "Twi",
+      "French",
+      "Religious & Moral Education",
+      "Computing",
+      "English Language",
+      "History",
+    ],
+    JHS: [
+      "Mathematics",
+      "Integrated Science",
+      "Social Studies",
+      "Creative Arts",
+      "Twi",
+      "French",
+      "Religious & Moral Education",
+      "Computing",
+      "English Language",
+      "Career Technology",
+    ],
+  },
+
   name: "",
   saved: false,
 };
@@ -38,7 +51,9 @@ export type StudentAction =
   | {
       type: "SET_BEHAVIOUR";
       payload: { id: string; field: string; value: string };
-    };
+    }
+  | { type: "RESET_ALL_STUDENT_FIELDS" }
+  | { type: "RESET_CURRENT_SUBJECT"; payload: string };
 
 function studentReducer(
   state: StudentState,
@@ -184,6 +199,23 @@ function studentReducer(
               }
             : student,
         ),
+      };
+
+    case "RESET_ALL_STUDENT_FIELDS":
+      return {
+        ...state,
+        students: state.students.map((student) => ({
+          ...student,
+          subjects: {},
+          attendance: 0,
+          promoted_to: "",
+        })),
+      };
+
+    case "RESET_CURRENT_SUBJECT":
+      return {
+        ...state,
+        currentSubject: action.payload,
       };
 
     default:

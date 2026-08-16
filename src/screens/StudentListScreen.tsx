@@ -1,4 +1,5 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -15,6 +16,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  runOnJS,
+} from "react-native-reanimated";
+import { Dimensions } from "react-native";
+
 import { useStudents } from "@/src/context/student/studentContext";
 import { useApp } from "@/src/context/app/appContext";
 import { Student } from "@/src/types";
@@ -23,6 +32,7 @@ import { getSubjectStatus } from "@/src/utilis/helperFunction";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useAutoSave } from "@/src/hooks/useAutoSave";
+import { useSubjectsByClass } from "@/src/hooks/useSubjectsByClass";
 
 type StudentListNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -45,7 +55,8 @@ export default function StudentListScreen() {
   const navigation = useNavigation<StudentListNavigationProp>();
 
   const { state: studentState, dispatch: studentDispatch } = useStudents();
-  const { state: appState, totalAttendance, selectTerm } = useApp();
+  const { state: appState } = useApp();
+  const { availableSubjects, totalSubjects } = useSubjectsByClass();
 
   const [search, setSearch] = useState("");
 
@@ -57,44 +68,76 @@ export default function StudentListScreen() {
     totalAttendance: appState.totalAttendance,
   });
 
-  /*
-  // load students if available
+  // draggable button
+  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } =
+    Dimensions.get("window");
+  const BUTTON_SIZE = 56;
+  const MARGIN = 24;
+  const STORAGE_KEY = "fab_position";
+
+  // Inside your StudentListScreen component:
+
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const startX = useSharedValue(0);
+  const startY = useSharedValue(0);
+
+  // Load saved position when screen opens
   useEffect(() => {
-    const loadSavedData = async () => {
+    const loadPosition = async () => {
       try {
-        const saved = await AsyncStorage.getItem(appState.selectedClass);
-
-        if (saved && appState.hasImported) return;
-
-        const reportData = saved ? JSON.parse(saved) : {};
-
-        if (reportData.students && reportData.students.length > 0) {
-          studentDispatch({
-            type: "FETCH_STUDENTS",
-            payload: reportData.students,
-          });
-
-          if (reportData.totalAttendance) {
-            totalAttendance(reportData.totalAttendance);
-          }
-
-          if (reportData.term) {
-            selectTerm(reportData.term);
-          }
-
-          Toast.show({
-            type: "success",
-            text1: "Previous data restored",
-            text2: `${reportData.students.length} students loaded`,
-          });
+        const saved = await AsyncStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const { x, y } = JSON.parse(saved);
+          translateX.value = x;
+          translateY.value = y;
         }
-      } catch (error) {
-        console.log("Failed to load saved data:", error);
+      } catch (e) {
+        console.log("Failed to load FAB position", e);
       }
     };
+    loadPosition();
+  }, []);
 
-    loadSavedData();
-  }, [appState.selectedClass]); */
+  // Save position
+  const savePosition = async (x: number, y: number) => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ x, y }));
+    } catch (e) {
+      console.log("Failed to save FAB position", e);
+    }
+  };
+
+  const panGesture = Gesture.Pan()
+    .onBegin(() => {
+      startX.value = translateX.value;
+      startY.value = translateY.value;
+    })
+    .onUpdate((e) => {
+      translateX.value = startX.value + e.translationX;
+      translateY.value = startY.value + e.translationY;
+    })
+    .onEnd(() => {
+      const maxX = SCREEN_WIDTH / 2 - BUTTON_SIZE / 2 - MARGIN;
+
+      // Leave space for the bottom Settings bar (~100px)
+      const maxY = SCREEN_HEIGHT / 2 - BUTTON_SIZE / 2 - 130;
+      const minY = -(SCREEN_HEIGHT / 2 - BUTTON_SIZE / 2 - 80);
+
+      if (translateX.value > maxX) translateX.value = maxX;
+      if (translateX.value < -maxX) translateX.value = -maxX;
+      if (translateY.value > maxY) translateY.value = maxY;
+      if (translateY.value < minY) translateY.value = minY;
+
+      runOnJS(savePosition)(translateX.value, translateY.value);
+    });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+    ],
+  }));
 
   // =========================
   // Filter Students
@@ -184,41 +227,7 @@ export default function StudentListScreen() {
     });
   };
 
-  // save and share
-
-  const handleSaveToStorage = async () => {
-    if (!appState.selectedClass) {
-      Toast.show({ type: "error", text1: "No class selected" });
-      return;
-    }
-
-    if (studentState.students.length === 0) {
-      Toast.show({ type: "error", text1: "No students to save" });
-      return;
-    }
-
-    try {
-      const reportData = {
-        school: "Chrispal International School",
-        class: appState.selectedClass,
-        students: studentState.students,
-        totalAttendance: appState.totalAttendance,
-        savedAt: new Date().toISOString(),
-      };
-
-      await AsyncStorage.setItem("activeClass", JSON.stringify(reportData));
-
-      Toast.show({
-        type: "success",
-        text1: "Saved successfully",
-        text2: `${studentState.students.length} students saved`,
-      });
-    } catch (error) {
-      console.error(error);
-      Toast.show({ type: "error", text1: "Failed to save data" });
-    }
-  };
-
+  // handle share
   const handleShare = async () => {
     if (studentState.students.length === 0) {
       Toast.show({ type: "error", text1: "No students to share" });
@@ -266,6 +275,16 @@ export default function StudentListScreen() {
     }
   };
 
+  //   Runs every time this screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      studentDispatch({
+        type: "SET_SUBJECT",
+        payload: availableSubjects[0] || "Mathematics",
+      });
+    }, [studentDispatch, availableSubjects]),
+  );
+
   return (
     <View className="flex-1 bg-gray-100">
       {/* Header */}
@@ -280,13 +299,6 @@ export default function StudentListScreen() {
           <View className="flex-row gap-2">
             <TouchableOpacity
               className="bg-emerald-500 px-3 py-2 rounded-lg"
-              onPress={handleSaveToStorage}
-            >
-              <Text className="text-white text-xs font-semibold">Save</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              className="bg-blue-600 px-3 py-2 rounded-lg"
               onPress={handleShare}
             >
               <Text className="text-white text-xs font-semibold">Share</Text>
@@ -341,11 +353,10 @@ export default function StudentListScreen() {
           </View>
         }
         renderItem={({ item }) => {
-          const completedCount = studentState.subjects.filter(
+          console.log("total subjects : ", totalSubjects);
+          const completedCount = availableSubjects.filter(
             (subject) => getSubjectStatus(item, subject) === "complete",
           ).length;
-
-          const totalSubjects = studentState.subjects.length;
 
           // Color of the progress dot
           let progressColor = "bg-gray-300";
@@ -390,15 +401,30 @@ export default function StudentListScreen() {
           );
         }}
       />
-      {/* Floating Button */}
 
-      <TouchableOpacity
-        className="absolute bottom-8 right-6 w-14 h-14 rounded-full bg-blue-600 items-center justify-center shadow-lg"
-        activeOpacity={0.8}
-        onPress={openAddModal}
-      >
-        <Text className="text-white text-3xl font-light">+</Text>
-      </TouchableOpacity>
+      {/* Floating Button */}
+      <GestureDetector gesture={panGesture}>
+        <Animated.View
+          style={[
+            animatedStyle,
+            {
+              position: "absolute",
+              bottom: 110, // ← sits above the Settings bar
+              right: 24,
+              zIndex: 100, // ← above everything
+              elevation: 100, // Android
+            },
+          ]}
+        >
+          <TouchableOpacity
+            className="w-14 h-14 rounded-full bg-blue-600 items-center justify-center shadow-lg"
+            activeOpacity={0.8}
+            onPress={openAddModal}
+          >
+            <Text className="text-white text-3xl font-light">+</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </GestureDetector>
 
       {/* ========== ADD STUDENT MODAL ========== */}
       <Modal
@@ -447,7 +473,7 @@ export default function StudentListScreen() {
         animationType="fade"
         onRequestClose={() => setRemoveModalVisible(false)}
       >
-        <View className="flex-1 bg-black/50 justify-center items-center px-6">
+        <View className="flex-1 bg-black/50 justify-center items-center px-6  z-50">
           <View className="bg-white w-full rounded-2xl p-6">
             <Text className="text-xl font-bold text-gray-800 mb-2">
               Remove Student

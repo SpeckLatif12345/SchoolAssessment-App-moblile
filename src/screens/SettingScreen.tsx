@@ -5,10 +5,13 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  Modal,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Picker } from "@react-native-picker/picker";
 import { useApp } from "@/src/context/app/appContext";
+import { useStudents } from "@/src/context/student/studentContext";
+import Toast from "react-native-toast-message";
 
 export default function SettingsScreen() {
   const navigation = useNavigation();
@@ -19,12 +22,26 @@ export default function SettingsScreen() {
     dispatch: appDispatch,
   } = useApp();
 
+  const { dispatch: studentDispatch } = useStudents();
+
+  const [resetModalVisible, setResetModalVisible] = useState(false);
+
   function handleTermChange(value: string) {
     appDispatch({
       type: "SET_TERM",
       payload: value,
     });
   }
+
+  const handleResetAll = () => {
+    studentDispatch({ type: "RESET_ALL_STUDENT_FIELDS" });
+    setResetModalVisible(false);
+
+    Toast.show({
+      type: "success",
+      text1: "All student fields have been reset",
+    });
+  };
 
   return (
     <View className="flex-1 bg-gray-100">
@@ -85,11 +102,64 @@ export default function SettingsScreen() {
             maxLength={3}
             placeholder="0"
           />
-          <Text className="text-xs text-gray-400 mt-2 text-center">
-            Maximum number of school days in this term
+        </View>
+
+        {/* Reset Section */}
+        <View className="bg-white rounded-2xl p-5 mb-8">
+          <Text className="text-sm font-semibold text-gray-500 mb-2">
+            DANGER ZONE
           </Text>
+          <Text className="text-gray-600 text-sm mb-4">
+            Clear all scores and attendance for every student. Student names and
+            behaviour will remain.
+          </Text>
+
+          <TouchableOpacity
+            className="bg-red-500 py-3.5 rounded-xl items-center"
+            onPress={() => setResetModalVisible(true)}
+          >
+            <Text className="text-white font-semibold">
+              Reset All Student Fields
+            </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Reset Confirmation Modal */}
+      <Modal
+        visible={resetModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setResetModalVisible(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center px-6">
+          <View className="bg-white w-full rounded-2xl p-6">
+            <Text className="text-xl font-bold text-gray-800 mb-2">
+              Reset All Data?
+            </Text>
+            <Text className="text-gray-600 mb-6">
+              This will clear all scores and attendance for every student.
+              Student names and behaviour will remain.
+            </Text>
+
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                className="flex-1 bg-gray-200 py-3 rounded-xl items-center"
+                onPress={() => setResetModalVisible(false)}
+              >
+                <Text className="font-semibold text-gray-700">Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="flex-1 bg-red-500 py-3 rounded-xl items-center"
+                onPress={handleResetAll}
+              >
+                <Text className="font-semibold text-white">Reset</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

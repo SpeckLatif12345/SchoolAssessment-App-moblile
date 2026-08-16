@@ -12,7 +12,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { useStudents } from "@/src/context/student/studentContext";
 import { useApp } from "@/src/context/app/appContext";
 import { Picker } from "@react-native-picker/picker";
-import Toast from "react-native-toast-message";
+import { useSubjectsByClass } from "@/src/hooks/useSubjectsByClass";
 import { Student } from "../types";
 
 const ScoreInput = ({
@@ -52,77 +52,17 @@ export default function StudentDetailScreen() {
 
   const { state: studentState, dispatch } = useStudents();
   const { state: appState } = useApp();
+  const { availableSubjects, currentSubject } = useSubjectsByClass();
 
   const student: Student | undefined = studentState.students.find(
     (s) => s.id === studentId,
   );
-  const currentSubject = studentState.currentSubject;
+
   const data = student?.subjects?.[currentSubject] || {};
   console.log("student data : ", student);
 
   // Calculations
   const totalAB = data.classPercent + data.examPercent;
-
-  /*
-  const handleSave = () => {
-    const fields = [
-      { field: "projectWork", value: projectWork },
-      { field: "classWork", value: classWork },
-      { field: "classTestOne", value: classTestOne },
-      { field: "classTestTwo", value: classTestTwo },
-      { field: "HomeWork", value: homeWork },
-      { field: "examScore", value: examScore },
-    ];
-
-    fields.forEach(({ field, value }) => {
-      dispatch({
-        type: "SET_SCORE",
-        payload: {
-          id: studentId,
-          field,
-          value: Number(value) || 0,
-        },
-      });
-    });
-
-    dispatch({
-      type: "SET_STUDENT_ATTENDANCE",
-      payload: { id: studentId, value: Number(attendance) || 0 },
-    });
-
-    dispatch({
-      type: "SET_PROMOTED_TO",
-      payload: { id: studentId, value: promotedTo },
-    });
-
-    dispatch({
-      type: "SET_BEHAVIOUR",
-      payload: { id: studentId, field: "conduct", value: conduct },
-    });
-    dispatch({
-      type: "SET_BEHAVIOUR",
-      payload: { id: studentId, field: "attitude", value: attitude },
-    });
-    dispatch({
-      type: "SET_BEHAVIOUR",
-      payload: { id: studentId, field: "interest", value: interest },
-    });
-    dispatch({
-      type: "SET_BEHAVIOUR",
-      payload: {
-        id: studentId,
-        field: "class_teacher_remarks",
-        value: remarks,
-      },
-    });
-
-    Toast.show({
-      type: "success",
-      text1: "Student data saved successfully",
-    });
-
-    navigation.goBack();
-  }; */
 
   // Handle score change for a student
   function handleScoreChange(id: string, field: string, value: number) {
@@ -167,12 +107,6 @@ export default function StudentDetailScreen() {
         <Text className="text-lg font-bold text-gray-800 flex-1 text-center">
           {student?.name}
         </Text>
-
-        {/*
-        <TouchableOpacity onPress={handleSave}>
-          <Text className="text-blue-600 text-base font-semibold">Save</Text>
-        </TouchableOpacity>
-        */}
       </View>
 
       <ScrollView
@@ -194,7 +128,7 @@ export default function StudentDetailScreen() {
               }}
               style={{ height: 50 }}
             >
-              {studentState.subjects.map((subject) => (
+              {availableSubjects.map((subject) => (
                 <Picker.Item key={subject} label={subject} value={subject} />
               ))}
             </Picker>
