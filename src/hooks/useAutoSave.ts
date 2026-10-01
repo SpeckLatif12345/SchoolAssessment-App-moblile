@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Toast from "react-native-toast-message";
 
 type AutoSaveData = {
   className: string;
@@ -34,33 +35,25 @@ export function useAutoSave({
 
     // Save after 1.5 seconds of no changes (debounce)
     timeoutRef.current = setTimeout(async () => {
-      try {
-        const reportData = {
-          school: "Chrispal International School",
-          class: className,
-          students,
-          term,
-          totalAttendance,
-          savedAt: new Date().toISOString(),
-        };
+      const reportData = {
+        school: "Chrispal International School",
+        class: className,
+        students,
+        term,
+        totalAttendance,
+        savedAt: new Date().toISOString(),
+      };
 
-        // await AsyncStorage.setItem(className, JSON.stringify(reportData));
-        await AsyncStorage.setItem("activeClass", JSON.stringify(reportData));
+      await AsyncStorage.setItem("activeClass", JSON.stringify(reportData));
 
-        // Format time like: 07:52 AM
-        const now = new Date();
-        const formatted = now.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
+      // Format time like: 07:52 AM
+      const now = new Date();
+      const formatted = now.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
 
-        setLastSaved(formatted);
-        console.log("Auto-saved at", formatted);
-
-        console.log("Auto-saved:", className);
-      } catch (error) {
-        console.log("Auto-save failed:", error);
-      }
+      setLastSaved(formatted);
     }, 1500);
 
     return () => {
@@ -68,7 +61,7 @@ export function useAutoSave({
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [students, totalAttendance, className]);
+  }, [students, totalAttendance, className, term]);
 
   return { lastSaved };
 }

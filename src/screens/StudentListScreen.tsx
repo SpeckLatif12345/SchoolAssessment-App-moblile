@@ -76,7 +76,6 @@ export default function StudentListScreen() {
   const STORAGE_KEY = "fab_position";
 
   // Inside your StudentListScreen component:
-
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const startX = useSharedValue(0);
@@ -85,15 +84,11 @@ export default function StudentListScreen() {
   // Load saved position when screen opens
   useEffect(() => {
     const loadPosition = async () => {
-      try {
-        const saved = await AsyncStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          const { x, y } = JSON.parse(saved);
-          translateX.value = x;
-          translateY.value = y;
-        }
-      } catch (e) {
-        console.log("Failed to load FAB position", e);
+      const saved = await AsyncStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const { x, y } = JSON.parse(saved);
+        translateX.value = x;
+        translateY.value = y;
       }
     };
     loadPosition();
@@ -139,10 +134,7 @@ export default function StudentListScreen() {
     ],
   }));
 
-  // =========================
-  // Filter Students
-  // =========================
-
+  // Filter students based on search input
   const filteredStudents = useMemo(() => {
     const keyword = search.trim().toLowerCase();
 
@@ -153,15 +145,13 @@ export default function StudentListScreen() {
     );
   }, [search, studentState.students]);
 
-  // stopped here next , add attendance compulsory , add promoted to when it third term
-
   // handle select student
   const handleSelectStudent = (studentId: string) => {
     navigation.navigate("StudentDetail", { studentId });
     setTimeout(() => setSearch(""), 1000);
   };
 
-  // ===== ADD STUDENT =====
+  //  handle add student
   const openAddModal = () => {
     setNewStudentName("");
     setAddModalVisible(true);
@@ -204,7 +194,7 @@ export default function StudentListScreen() {
     });
   };
 
-  // ===== REMOVE STUDENT =====
+  //  handle remove student
   const openRemoveModal = (id: string, name: string) => {
     setStudentToRemove({ id, name });
     setRemoveModalVisible(true);
@@ -270,8 +260,10 @@ export default function StudentListScreen() {
         UTI: "public.json",
       });
     } catch (error) {
-      console.error(error);
-      Toast.show({ type: "error", text1: "Failed to share file" });
+      Toast.show({
+        type: "error",
+        text1: "Failed to share file , Please try again",
+      });
     }
   };
 
@@ -353,7 +345,6 @@ export default function StudentListScreen() {
           </View>
         }
         renderItem={({ item }) => {
-          console.log("total subjects : ", totalSubjects);
           const completedCount = availableSubjects.filter(
             (subject) => getSubjectStatus(item, subject) === "complete",
           ).length;

@@ -13,7 +13,6 @@ export const initialState = {
   ],
   totalAttendance: 0,
   isFullscreen: false,
-  hasImported: false,
   term_names: ["Term One", "Term Two", "Term Three"],
   selectedTerm: "",
 };
@@ -28,7 +27,6 @@ export type AppAction =
   | { type: "SET_TOTAL_ATTENDANCE"; payload: number }
   | { type: "CLEAR_TOTAL_ATTENDANCE" }
   | { type: "TOGGLE_FULLSCREEN" }
-  | { type: "SET_IMPORT_STATUS"; payload: boolean }
   | { type: "SET_TERM"; payload: string };
 
 export function appReducer(state: AppState, action: AppAction): AppState {
@@ -57,11 +55,6 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         isFullscreen: !state.isFullscreen,
-      };
-    case "SET_IMPORT_STATUS":
-      return {
-        ...state,
-        hasImported: action.payload,
       };
 
     case "SET_TERM":

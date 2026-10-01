@@ -49,7 +49,6 @@ export function useRestoreSession() {
           }
 
           if (reportData.class) {
-            console.log("class name in useRestore :", reportData.class);
             chooseClass(reportData.class);
           }
 

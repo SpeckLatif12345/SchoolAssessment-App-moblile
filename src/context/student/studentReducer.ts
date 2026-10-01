@@ -53,7 +53,8 @@ export type StudentAction =
       payload: { id: string; field: string; value: string };
     }
   | { type: "RESET_ALL_STUDENT_FIELDS" }
-  | { type: "RESET_CURRENT_SUBJECT"; payload: string };
+  | { type: "RESET_CURRENT_SUBJECT"; payload: string }
+  | { type: "CLEAR_STUDENTS" };
 
 function studentReducer(
   state: StudentState,
@@ -119,13 +120,10 @@ function studentReducer(
             const currentSubject =
               student.subjects?.[state.currentSubject] || {};
 
-            // getting field score
-            const field_score = scores[field as keyof typeof scores] || 0;
-
             // Update the edited field
             const updatedSubject = {
               ...currentSubject,
-              [field]: Number(value) <= field_score ? Number(value) : 0,
+              [field]: value,
             };
 
             const totalA = titles.reduce((sum, key) => {
@@ -164,7 +162,7 @@ function studentReducer(
 
     case "SET_STUDENT_ATTENDANCE": {
       const { id, value } = action.payload;
-      console.log("SET_STUDENT_ATTENDANCE action.payload: ", action.payload);
+
       return {
         ...state,
         students: state.students.map((student) =>
@@ -216,6 +214,12 @@ function studentReducer(
       return {
         ...state,
         currentSubject: action.payload,
+      };
+
+    case "CLEAR_STUDENTS":
+      return {
+        ...state,
+        students: [],
       };
 
     default:

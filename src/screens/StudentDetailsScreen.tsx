@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { useApp } from "@/src/context/app/appContext";
 import { Picker } from "@react-native-picker/picker";
 import { useSubjectsByClass } from "@/src/hooks/useSubjectsByClass";
 import { Student } from "../types";
+import { useTheme } from "@/src/hooks/useTheme";
 
 const ScoreInput = ({
   studentId,
@@ -30,16 +31,57 @@ const ScoreInput = ({
   onChange: (id: string, field: string, value: number) => void;
   max: number;
 }) => {
+  const [flashRed, setFlashRed] = useState(false);
+
+  const handleChange = (text: string) => {
+    setFlashRed(false);
+
+    // Allow empty while typing
+    if (text === "") {
+      onChange(studentId, field, 0);
+      return;
+    }
+
+    // Digits only
+    const cleaned = text.replace(/[^0-9]/g, "");
+    if (cleaned === "") {
+      onChange(studentId, field, 0);
+      return;
+    }
+
+    let num = Number(cleaned);
+
+    if (num > max) {
+      setFlashRed(true);
+      setTimeout(() => setFlashRed(false), 500);
+      onChange(studentId, field, 0);
+      return;
+    }
+    if (num <= max) {
+      onChange(studentId, field, num);
+      return;
+    }
+  };
+
   return (
     <View className="flex-row items-center justify-between mb-3">
       <Text className="text-gray-700 text-[15px] flex-1">{label}</Text>
+
       <TextInput
-        className="w-20 border border-gray-300 rounded-lg py-2 text-center text-base font-semibold"
+        className="w-20 rounded-lg py-2 text-center text-base font-semibold"
+        style={{
+          borderWidth: 1,
+          borderColor: flashRed ? "#ef4444" : "#d1d5db", // red-500 / gray-300
+          backgroundColor: flashRed ? "#fef2f2" : "#ffffff",
+          color: flashRed ? "#dc2626" : "#111827",
+        }}
         keyboardType="numeric"
-        value={String(value ?? "")}
-        onChangeText={(text) => onChange(studentId, field, Number(text) || 0)}
+        value={String(value ?? 0)}
+        onChangeText={handleChange}
         maxLength={3}
+        selectTextOnFocus
       />
+
       <Text className="text-gray-400 text-sm ml-2 w-10">/{max}</Text>
     </View>
   );
@@ -49,20 +91,26 @@ export default function StudentDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { studentId } = route.params as { studentId: string };
+  const { isDark, colors } = useTheme();
 
   const { state: studentState, dispatch } = useStudents();
   const { state: appState } = useApp();
   const { availableSubjects, currentSubject } = useSubjectsByClass();
 
-  const student: Student | undefined = studentState.students.find(
-    (s) => s.id === studentId,
+  const student: Student | undefined = useMemo(() => {
+    return studentState.students.find((s) => s.id === studentId);
+  }, [studentId, studentState.students]);
+
+  const data = useMemo(
+    () => student?.subjects?.[currentSubject] || {},
+    [student, studentState.students, studentId, currentSubject],
   );
 
-  const data = student?.subjects?.[currentSubject] || {};
-  console.log("student data : ", student);
-
   // Calculations
-  const totalAB = data.classPercent + data.examPercent;
+  const totalAB = useMemo(
+    () => data.classPercent + data.examPercent,
+    [data, studentState.students, studentId, currentSubject],
+  );
 
   // Handle score change for a student
   function handleScoreChange(id: string, field: string, value: number) {
@@ -71,7 +119,7 @@ export default function StudentDetailScreen() {
       payload: { id, field, value },
     });
   }
-
+  // handle  student attendance change
   function handleAttendanceChange(id: string, value: number) {
     dispatch({
       type: "SET_STUDENT_ATTENDANCE",
@@ -79,6 +127,7 @@ export default function StudentDetailScreen() {
     });
   }
 
+  // handle promotion change
   function handlePromotedToChange(id: string, value: string) {
     dispatch({
       type: "SET_PROMOTED_TO",
@@ -86,11 +135,23 @@ export default function StudentDetailScreen() {
     });
   }
 
+  // handle behaviour change
   function handleBehaviourChange(id: string, field: string, value: string) {
     dispatch({
       type: "SET_BEHAVIOUR",
       payload: { id, field, value },
     });
+  }
+
+  // determine badge class based on total score
+  function totalBadgeClass(total: number) {
+    if (total >= 80) return "text-emerald-600 ";
+
+    if (total >= 65) return " text-blue-800 ";
+
+    if (total >= 50) return " text-amber-800 ";
+
+    return " text-rose-800";
   }
 
   return (
@@ -101,7 +162,7 @@ export default function StudentDetailScreen() {
       {/* Header */}
       <View className="bg-white px-5 pt-12 pb-4 border-b border-gray-200 flex-row items-center justify-between">
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text className="text-blue-600 text-base font-medium">← Back</Text>
+          <Text className="text-blue-600 text-base font-medium">Back</Text>
         </TouchableOpacity>
 
         <Text className="text-lg font-bold text-gray-800 flex-1 text-center">
@@ -126,7 +187,11 @@ export default function StudentDetailScreen() {
                   payload: value,
                 });
               }}
-              style={{ height: 50 }}
+              style={{
+                height: 50,
+                color: isDark ? "#FFFFFF" : "#111827",
+                backgroundColor: isDark ? "#1F2937" : "#FFFFFF",
+              }}
             >
               {availableSubjects.map((subject) => (
                 <Picker.Item key={subject} label={subject} value={subject} />
@@ -220,7 +285,7 @@ export default function StudentDetailScreen() {
             </View>
             <View className="flex-row justify-between">
               <Text className="font-semibold text-gray-800">Total A + B</Text>
-              <Text className="font-bold text-emerald-600 text-lg">
+              <Text className={`font-bold ${totalBadgeClass(totalAB)} text-lg`}>
                 {Math.round(totalAB) || 0}%
               </Text>
             </View>
@@ -253,7 +318,11 @@ export default function StudentDetailScreen() {
               onValueChange={(value) =>
                 handlePromotedToChange(studentId, value)
               }
-              style={{ height: 50 }}
+              style={{
+                height: 50,
+                color: isDark ? "#FFFFFF" : "#111827",
+                backgroundColor: isDark ? "#1F2937" : "#FFFFFF",
+              }}
             >
               <Picker.Item label="Select class" value="" />
               {appState.class_names.map((name) => (
@@ -271,59 +340,53 @@ export default function StudentDetailScreen() {
 
           <Text className="text-gray-700 text-[15px] mb-1">Conduct</Text>
           <TextInput
-            className="border border-gray-300 rounded-lg px-3 py-2.5 mb-3 text-base  "
+            className="border border-gray-300 rounded-lg px-3 py-2.5 mb-3 text-base text-gray-900 "
             value={student?.behaviour?.conduct || ""}
             onChangeText={(text) =>
               handleBehaviourChange(studentId, "conduct", text)
             }
-            placeholder="e.g. Good"
+            placeholder="optional"
+            placeholderTextColor="#6B7280"
           />
 
           <Text className="text-gray-700 text-[15px] mb-1">Attitude</Text>
           <TextInput
-            className="border border-gray-300 rounded-lg px-3 py-2.5 mb-3 text-base"
+            className="border border-gray-300 rounded-lg px-3 py-2.5 mb-3 text-base text-gray-900"
+            placeholder="optional"
+            placeholderTextColor="#6B7280"
             value={student?.behaviour?.attitude || ""}
             onChangeText={(text) =>
               handleBehaviourChange(studentId, "attitude", text)
             }
-            placeholder="e.g. Positive"
           />
 
           <Text className="text-gray-700 text-[15px] mb-1">Interest</Text>
           <TextInput
-            className="border border-gray-300 rounded-lg px-3 py-2.5 mb-3 text-base"
+            className="border border-gray-300 rounded-lg px-3 py-2.5 mb-3 text-base text-gray-900"
+            placeholder="optional"
+            placeholderTextColor="#6B7280"
             value={student?.behaviour?.interest || ""}
             onChangeText={(text) =>
               handleBehaviourChange(studentId, "interest", text)
             }
-            placeholder="e.g. High"
           />
 
           <Text className="text-gray-700 text-[15px] mb-1">
             Class Teacher's Remarks
           </Text>
           <TextInput
-            className="border border-gray-300 rounded-lg px-3 py-2.5 text-base"
+            className="border border-gray-300 rounded-lg px-3 py-2.5 text-base text-gray-900"
             value={student?.behaviour?.class_teacher_remarks || ""}
             onChangeText={(text) =>
               handleBehaviourChange(studentId, "class_teacher_remarks", text)
             }
-            placeholder="Enter remarks..."
+            placeholder="optional"
+            placeholderTextColor="#6B7280"
             multiline
             numberOfLines={3}
             textAlignVertical="top"
           />
         </View>
-
-        {/* Save Button 
-        <TouchableOpacity
-          className="bg-blue-600 py-4 rounded-xl items-center mb-6"
-          onPress={handleSave}
-        >
-          <Text className="text-white text-base font-bold">
-            Save Student Data
-          </Text>
-        </TouchableOpacity> */}
       </ScrollView>
     </KeyboardAvoidingView>
   );

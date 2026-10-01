@@ -31,6 +31,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   function resetSetup() {
     dispatch({ type: "CLEAR_CLASS" });
     dispatch({ type: "CLEAR_TOTAL_ATTENDANCE" });
+    dispatch({ type: "SET_TERM", payload: "Term 1" });
   }
 
   return (
