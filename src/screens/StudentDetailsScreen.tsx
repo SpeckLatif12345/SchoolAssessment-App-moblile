@@ -15,6 +15,7 @@ import { Picker } from "@react-native-picker/picker";
 import { useSubjectsByClass } from "@/src/hooks/useSubjectsByClass";
 import { Student } from "../types";
 import { useTheme } from "@/src/hooks/useTheme";
+import Toast from "react-native-toast-message";
 
 const ScoreInput = ({
   studentId,
@@ -61,7 +62,7 @@ const ScoreInput = ({
       onChange(studentId, field, num);
       return;
     }
-  };
+  }; // adding auto generate scores
 
   return (
     <View className="flex-row items-center justify-between mb-3">
@@ -154,6 +155,30 @@ export default function StudentDetailScreen() {
     return " text-rose-800";
   }
 
+  //  handle auto generate scores for continuous assessment
+  const generateContinuousAssessment = () => {
+    if (!studentId) return;
+
+    const scores = [
+      { field: "ProjectWork", value: 20 },
+      { field: "ClassWork", value: 40 },
+      { field: "ClassTest1", value: 10 },
+      { field: "ClassTest2", value: 10 },
+      { field: "HomeWork", value: 20 },
+    ];
+
+    scores.forEach(({ field, value }) => {
+      dispatch({
+        type: "SET_SCORE",
+        payload: {
+          id: studentId,
+          field,
+          value,
+        },
+      });
+    });
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -202,9 +227,17 @@ export default function StudentDetailScreen() {
 
         {/* Continuous Assessment */}
         <View className="bg-white rounded-2xl p-5 mb-5">
-          <Text className="text-lg font-bold text-gray-800 mb-4">
-            Continuous Assessment
-          </Text>
+          <View className="flex-row items-center justify-between mb-4">
+            <Text className="text-lg font-bold text-gray-800 mb-4">
+              Continuous Assessment
+            </Text>
+            <TouchableOpacity
+              className="bg-indigo-600 px-3 py-1.5 mb-4 rounded-lg"
+              onPress={generateContinuousAssessment}
+            >
+              <Text className="text-white text-xs font-semibold">Auto</Text>
+            </TouchableOpacity>
+          </View>
 
           <ScoreInput
             studentId={studentId}

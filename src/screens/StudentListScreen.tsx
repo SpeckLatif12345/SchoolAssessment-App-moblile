@@ -225,10 +225,31 @@ export default function StudentListScreen() {
     }
 
     try {
+      const payload = studentState.students.map((student) => {
+        const payloadSubjects: Record<
+          string,
+          { classPercent: number; examPercent: number }
+        > = {};
+        const subjects = student.subjects || {};
+
+        Object.keys(subjects).forEach((subjectName) => {
+          const data = subjects[subjectName] || {};
+          payloadSubjects[subjectName] = {
+            classPercent: Number(data.classPercent) || 0,
+            examPercent: Number(data.examPercent) || 0,
+          };
+        });
+
+        return {
+          ...student,
+          subjects: payloadSubjects,
+        };
+      });
+
       const reportData = {
         school: "Chrispal International School",
         class: appState.selectedClass,
-        students: studentState.students,
+        students: payload,
         totalAttendance: appState.totalAttendance,
         savedAt: new Date().toISOString(),
       };

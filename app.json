@@ -1,22 +1,27 @@
 {
   "expo": {
-    "name": "SchoolAssessment",
-    "slug": "SchoolAssessment",
+    "name": "School Assessment",
+    "slug": "school-assessment",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#ffffff",
+        "backgroundColor": "#2563eb",
         "foregroundImage": "./assets/icon.png"
       },
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "pan",
-      "package": "com.anonymous.SchoolAssessment"
+      "package": "com.school.assessment"
     },
     "web": {
       "favicon": "./assets/icon.png"
